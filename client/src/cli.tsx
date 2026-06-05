@@ -1,6 +1,15 @@
+#!/usr/bin/env node
 import React from 'react';
 import { render } from 'ink';
-import App from './App';
+import App from './App.js';
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const packageJson = JSON.parse(fs.readFileSync(path.join(__dirname, '../package.json'), 'utf-8'));
+const version = packageJson.version;
 
 const args = process.argv.slice(2);
 const action = args[0] as 'create' | 'join';
@@ -22,4 +31,4 @@ if (action === 'join') {
 }
 
 // Render the ink application
-render(<App action={action} roomCode={roomCode} />);
+render(<App action={action} roomCode={roomCode} version={version} />);
