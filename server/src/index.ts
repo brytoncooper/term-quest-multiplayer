@@ -143,6 +143,19 @@ wss.on('connection', (ws) => {
           break;
         }
         
+        case 'leave_game': {
+          if (client.roomId && rooms[client.roomId]) {
+            const room = rooms[client.roomId];
+            if (room.gameState && typeof room.gameState.removePlayer === 'function') {
+              room.gameState.removePlayer(clientId);
+            }
+            room.gameId = null;
+            room.gameState = null;
+            broadcastToRoom(client.roomId, { type: 'returned_to_lobby' });
+          }
+          break;
+        }
+
         // Pass everything else to the specific game logic
         default: {
           if (client.roomId && rooms[client.roomId]) {
@@ -176,6 +189,17 @@ wss.on('connection', (ws) => {
     const client = clients[clientId];
     if (client.roomId && rooms[client.roomId]) {
       const room = rooms[client.roomId];
+
+      // If a game is in progress, notify remaining players
+      if (room.gameState) {
+        broadcastToRoom(client.roomId, { type: 'opponent_disconnected' });
+        if (typeof room.gameState.removePlayer === 'function') {
+          room.gameState.removePlayer(clientId);
+        }
+        room.gameId = null;
+        room.gameState = null;
+      }
+
       delete room.players[clientId];
       broadcastToRoom(client.roomId, { type: 'player_left' });
       if (Object.keys(room.players).length === 0) {

@@ -73,6 +73,19 @@ export default function App({ action, roomCode, version, serverUrl = 'wss://term
             }
             break;
             
+          case 'returned_to_lobby':
+            setGameId(null);
+            setGameState(null);
+            setView('LOBBY');
+            break;
+
+          case 'opponent_disconnected':
+            setGameId(null);
+            setGameState(null);
+            setErrorMsg('Your opponent disconnected.');
+            setView('LOBBY');
+            break;
+
           case 'error':
             if (msg.message === 'UPDATE_REQUIRED') {
               setErrorMsg('You are using an outdated version! Run: npm update -g @cli-games/term-quest-multiplayer');
@@ -95,6 +108,9 @@ export default function App({ action, roomCode, version, serverUrl = 'wss://term
     return () => { socket.close(); };
   }, [action, roomCode, serverUrl, version]);
 
+  const onLeave = () => {
+    ws?.send(JSON.stringify({ type: 'leave_game' }));
+  };
 
   if (view === 'ERROR') {
     return (
@@ -171,9 +187,9 @@ export default function App({ action, roomCode, version, serverUrl = 'wss://term
 
   if (view === 'GAME' && ws && playerId) {
     if (gameId === 'brawler') {
-      return <BrawlerView ws={ws} gameState={gameState} playerId={playerId} />;
+      return <BrawlerView ws={ws} gameState={gameState} playerId={playerId} onLeave={onLeave} />;
     } else if (gameId === 'tanks') {
-      return <TanksView ws={ws} gameState={gameState} playerId={playerId} />;
+      return <TanksView ws={ws} gameState={gameState} playerId={playerId} onLeave={onLeave} />;
     }
     return (
       <Box borderStyle="round" padding={1} flexDirection="column">
