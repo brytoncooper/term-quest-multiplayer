@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { Box, Text, useInput } from 'ink';
 import WebSocket from 'ws';
+import { getTankSprite, getTrajectoryPreview, getAngleIndicator } from './tankArt.js';
 
 // ─── Types ──────────────────────────────────────────────────────────────────────
 
@@ -309,34 +310,36 @@ export default function TanksView({ ws, gameState, playerId, onLeave }: TanksVie
   }
 
   // ── Draw tanks on grid ──
-  const tankArt = [
-    //    offset: [-2, -1, 0, 1, 2] from tank x,  rows above ground
-    { dy: -4, chars: [' ', ' ', '┃', ' ', ' '] },  // barrel
-    { dy: -3, chars: ['╔', '═', '╩', '═', '╗'] },  // turret base
-    { dy: -2, chars: ['║', ' ', '◉', ' ', '║'] },  // hull body
-    { dy: -1, chars: ['╚', '╦', '═', '╦', '╝'] },  // hull bottom
-    { dy: 0,  chars: [' ', '●', ' ', '●', ' '] },  // treads
-  ];
-
   if (gs.players) {
     for (const pid of gs.playerIds || []) {
       const p = gs.players[pid];
       if (!p) continue;
       const tankColor = p.color || 'white';
-      // Tank sits on the terrain. p.y is the ground row; tank body is above.
-      // Treads are at ground level (p.y), hull extends upward.
-      for (const artRow of tankArt) {
-        const gy = p.y + artRow.dy;
-        for (let di = 0; di < artRow.chars.length; di++) {
-          const gx = p.x - 2 + di;
-          if (gx >= 0 && gx < tWidth && gy >= 0 && gy < tHeight && artRow.chars[di] !== ' ') {
-            grid[gy][gx] = { char: artRow.chars[di], fg: tankColor, bold: true };
-          }
+      
+      // Determine facing direction: player on the left faces right, player on the right faces left
+      const facingRight = p.x < tWidth / 2;
+      
+      // Get current aim angle for the active player during fire phase
+      let displayAngle = 90; // default straight up
+      if (pid === playerId && gs.phase === 'fire' && myTurn) {
+        displayAngle = clamp(Number(angleStr) || 45, 0, 180);
+      } else if (pid !== playerId && gs.phase === 'fire' && !myTurn) {
+        displayAngle = 90; // opponent's angle unknown, show neutral
+      }
+      
+      // Get angle-aware tank sprite
+      const sprite = getTankSprite(displayAngle, facingRight);
+      for (const part of sprite) {
+        const gx = p.x + part.dx;
+        const gy = p.y + part.dy;
+        if (gx >= 0 && gx < tWidth && gy >= 0 && gy < tHeight) {
+          grid[gy][gx] = { char: part.char, fg: tankColor, bold: true };
         }
       }
+      
       // Player name label above tank
       const nameTag = p.name?.slice(0, 7) || pid.slice(0, 4);
-      const labelY = p.y - 5;
+      const labelY = p.y - 7;
       const labelStartX = p.x - Math.floor(nameTag.length / 2);
       if (labelY >= 0 && labelY < tHeight) {
         for (let ci = 0; ci < nameTag.length; ci++) {
@@ -344,6 +347,28 @@ export default function TanksView({ ws, gameState, playerId, onLeave }: TanksVie
           if (lx >= 0 && lx < tWidth) {
             grid[labelY][lx] = { char: nameTag[ci], fg: tankColor, bold: true };
           }
+        }
+      }
+    }
+  }
+
+  // ── Draw trajectory preview during fire phase ──
+  if (gs.phase === 'fire' && myTurn && me) {
+    const aimAngle = clamp(Number(angleStr) || 45, 0, 180);
+    const aimPower = clamp(Number(powerStr) || 50, 1, 100);
+    const startX = me.x;
+    const startY = me.y - 1; // turret position
+    const preview = getTrajectoryPreview(startX, startY, aimAngle, aimPower, wind, terrain, tHeight, tWidth);
+    
+    for (let i = 0; i < preview.length; i++) {
+      const pt = preview[i];
+      if (pt.x >= 0 && pt.x < tWidth && pt.y >= 0 && pt.y < tHeight) {
+        // Don't overwrite tank pixels
+        const existing = grid[pt.y][pt.x];
+        if (existing.char === ' ' || existing.char === '▓' || existing.char === '▒' || existing.char === '░') {
+          const fade = i / preview.length;
+          const dotColor = fade < 0.3 ? 'whiteBright' : fade < 0.6 ? 'cyanBright' : 'gray';
+          grid[pt.y][pt.x] = { char: '∙', fg: dotColor };
         }
       }
     }
@@ -661,6 +686,7 @@ export default function TanksView({ ws, gameState, playerId, onLeave }: TanksVie
               {'Angle: '}
             </Text>
             <Text color="whiteBright" bold>{padRight(angleDisplay, 5)}</Text>
+            <Text color="yellow">{getAngleIndicator(Number(angleStr) || 45)}</Text>
           </Box>
           <Text color="gray">{' │ '}</Text>
           {/* Power */}
