@@ -1,6 +1,6 @@
 {
   "name": "@cli-games/term-quest-multiplayer",
-  "version": "1.0.3",
+  "version": "1.0.4",
   "description": "Multiplayer terminal game",
   "files": [
     "dist"

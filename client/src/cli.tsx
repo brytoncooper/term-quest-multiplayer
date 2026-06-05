@@ -12,12 +12,13 @@ const packageJson = JSON.parse(fs.readFileSync(path.join(__dirname, '../package.
 const version = packageJson.version;
 
 const args = process.argv.slice(2);
-const action = args[0] as 'create' | 'join';
+const action = (args[0] || 'start') as 'create' | 'join' | 'start';
 
-if (action !== 'create' && action !== 'join') {
+if (action !== 'create' && action !== 'join' && action !== 'start') {
   console.error('Usage:');
-  console.error('  npx tsx src/cli.tsx create');
-  console.error('  npx tsx src/cli.tsx join <ROOM_CODE>');
+  console.error('  npx @cli-games/term-quest-multiplayer start');
+  console.error('  npx @cli-games/term-quest-multiplayer create');
+  console.error('  npx @cli-games/term-quest-multiplayer join <ROOM_CODE>');
   process.exit(1);
 }
 
