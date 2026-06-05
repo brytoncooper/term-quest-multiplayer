@@ -2,6 +2,7 @@ services:
   - type: web
     name: term-quest-server
     env: node
+    plan: free
     rootDir: server
     buildCommand: npm install && npm run build
     startCommand: npm run start:prod
