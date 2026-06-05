@@ -12,7 +12,10 @@ const packageJson = JSON.parse(fs.readFileSync(path.join(__dirname, '../package.
 const version = packageJson.version;
 
 const args = process.argv.slice(2);
-const action = (args[0] || 'start') as 'create' | 'join' | 'start';
+const isLocal = args.includes('--local');
+const cleanArgs = args.filter(a => a !== '--local');
+const action = (cleanArgs[0] || 'start') as 'create' | 'join' | 'start';
+const serverUrl = isLocal ? 'ws://localhost:3000' : 'wss://term-quest-server.onrender.com';
 
 if (action !== 'create' && action !== 'join' && action !== 'start') {
   console.error('Usage:');
@@ -32,4 +35,4 @@ if (action === 'join') {
 }
 
 // Render the ink application
-render(<App action={action} roomCode={roomCode} version={version} />);
+render(<App action={action} roomCode={roomCode} version={version} serverUrl={serverUrl} />);

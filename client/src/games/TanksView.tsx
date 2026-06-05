@@ -46,8 +46,7 @@ export default function TanksView({ ws, gameState, playerId }: TanksViewProps) {
     
     // Helper to send json payloads using the existing server payload format
     const sendAction = (action: any) => {
-      // Assuming index.ts passes data.key to handleInput
-      ws.send(JSON.stringify({ type: 'input', key: JSON.stringify(action) }));
+      ws.send(JSON.stringify(action));
     };
 
     if (gameState.phase === 'buy') {
@@ -93,6 +92,8 @@ export default function TanksView({ ws, gameState, playerId }: TanksViewProps) {
   }
 
   const me = gameState.players[playerId];
+  if (!me) return <Text>Loading player data...</Text>;
+
   const otherId = gameState.playerIds.find((id: string) => id !== playerId);
   const other = otherId ? gameState.players[otherId] : null;
 
